@@ -76,13 +76,18 @@ pub fn persisted_session_from_launch_args(
     let [command, session_id] = args else {
         return None;
     };
-    if agent != crate::detect::Agent::Codex || command != "resume" || session_id.starts_with('-') {
+    let (source, label) = match (agent, command.as_str()) {
+        (crate::detect::Agent::Bot, "--resume") => ("herdr:bot", "bot"),
+        (crate::detect::Agent::Codex, "resume") => ("herdr:codex", "codex"),
+        _ => return None,
+    };
+    if session_id.starts_with('-') {
         return None;
     }
 
     Some(PersistedAgentSession {
-        source: "herdr:codex".into(),
-        agent: "codex".into(),
+        source: source.into(),
+        agent: label.into(),
         session_ref: AgentSessionRef::id(session_id.clone())?,
     })
 }
@@ -139,6 +144,9 @@ pub fn plan(source: &str, agent: &str, session_ref: &AgentSessionRef) -> Option<
     }
 
     let argv = match (source, agent, session_ref.kind) {
+        ("herdr:bot", "bot", AgentSessionRefKind::Id) => {
+            vec!["bot".into(), "--resume".into(), session_ref.value.clone()]
+        }
         ("herdr:claude", "claude", AgentSessionRefKind::Id) => {
             vec![
                 "claude".into(),
@@ -265,7 +273,8 @@ pub fn dedupe_key(source: &str, agent: &str, session_ref: &AgentSessionRef) -> S
 pub(crate) fn is_official_agent_source(source: &str, agent: &str) -> bool {
     matches!(
         (source, agent),
-        ("herdr:claude", "claude")
+        ("herdr:bot", "bot")
+            | ("herdr:claude", "claude")
             | ("herdr:codex", "codex")
             | ("herdr:copilot", "copilot")
             | ("herdr:devin", "devin")
@@ -356,9 +365,32 @@ mod tests {
     }
 
     #[test]
+    fn bot_resume_launch_has_an_explicit_session() {
+        let session = persisted_session_from_launch_args(
+            crate::detect::Agent::Bot,
+            &["--resume".into(), "bot-session".into()],
+        )
+        .unwrap();
+
+        assert_eq!(session.source, "herdr:bot");
+        assert_eq!(session.agent, "bot");
+        assert_eq!(session.session_ref.value, "bot-session");
+    }
+
+    #[test]
     fn planner_allows_supported_agents() {
         let pi_session = absolute_test_path("pi-session.jsonl");
         let omp_session = absolute_test_path("omp-session.jsonl");
+        assert_eq!(
+            plan(
+                "herdr:bot",
+                "bot",
+                &AgentSessionRef::id("bot-session").unwrap()
+            )
+            .unwrap()
+            .argv,
+            vec!["bot", "--resume", "bot-session"]
+        );
         assert_eq!(
             plan(
                 "herdr:claude",

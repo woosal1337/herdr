@@ -64,7 +64,12 @@ STAGED_PUBLISHED_MANIFESTS = {
     ),
 }
 
-UNPUBLISHED_BUNDLED_MANIFESTS: dict[str, tuple[str, str]] = {}
+UNPUBLISHED_BUNDLED_MANIFESTS: dict[str, tuple[str, str]] = {
+    "bot": (
+        "2026.09.17.1",
+        "b3501255b9bfe210751fe5656231fc9d79d8c8c4c964a06b0cf31a2e87207050",
+    ),
+}
 
 
 def parse_args() -> argparse.Namespace:

@@ -41,6 +41,7 @@ pub struct AgentDetection {
 /// Which agent we detected running in a pane.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Agent {
+    Bot,
     Pi,
     Claude,
     Codex,
@@ -68,7 +69,8 @@ pub enum Agent {
 }
 
 impl Agent {
-    pub const ALL: [Self; 24] = [
+    pub const ALL: [Self; 25] = [
+        Self::Bot,
         Self::Pi,
         Self::Claude,
         Self::Codex,
@@ -95,7 +97,8 @@ impl Agent {
         Self::Muse,
     ];
 
-    pub const SCREEN_MANIFEST_AGENTS: [Self; 22] = [
+    pub const SCREEN_MANIFEST_AGENTS: [Self; 23] = [
+        Self::Bot,
         Self::Pi,
         Self::Claude,
         Self::Codex,
@@ -123,6 +126,7 @@ impl Agent {
 
 pub fn agent_label(agent: Agent) -> &'static str {
     match agent {
+        Agent::Bot => "bot",
         Agent::Pi => "pi",
         Agent::Claude => "claude",
         Agent::Codex => "codex",
@@ -152,6 +156,7 @@ pub fn agent_label(agent: Agent) -> &'static str {
 
 pub fn interactive_agent_executable(agent: Agent) -> &'static str {
     match agent {
+        Agent::Bot => "bot",
         Agent::Pi => "pi",
         Agent::Claude => "claude",
         Agent::Codex => "codex",
@@ -198,6 +203,7 @@ pub(crate) fn parse_canonical_agent_label(label: &str) -> Option<Agent> {
 fn lookup_agent(name: &str) -> Option<Agent> {
     let name = path_basename(name);
     match name {
+        "bot" => Some(Agent::Bot),
         "pi" => Some(Agent::Pi),
         "claude" | "claude-code" => Some(Agent::Claude),
         "codex" => Some(Agent::Codex),
@@ -327,7 +333,8 @@ pub fn should_skip_state_update(agent: Option<Agent>, screen_content: &str) -> b
 pub(crate) fn full_lifecycle_hook_authority(source: &str, agent_label: &str) -> bool {
     matches!(
         (source, agent_label),
-        ("herdr:pi", "pi")
+        ("herdr:bot", "bot")
+            | ("herdr:pi", "pi")
             | ("herdr:omp", "omp")
             | ("herdr:mastracode", "mastracode")
             | ("herdr:opencode", "opencode")
@@ -905,6 +912,7 @@ mod tests {
 
     #[test]
     fn identify_known_agents() {
+        assert_eq!(identify_agent("bot"), Some(Agent::Bot));
         assert_eq!(identify_agent("pi"), Some(Agent::Pi));
         assert_eq!(identify_agent("claude"), Some(Agent::Claude));
         assert_eq!(identify_agent("claude-code"), Some(Agent::Claude));
@@ -958,6 +966,7 @@ mod tests {
 
     #[test]
     fn parse_known_agent_labels() {
+        assert_eq!(parse_agent_label("bot"), Some(Agent::Bot));
         assert_eq!(parse_agent_label("pi"), Some(Agent::Pi));
         assert_eq!(parse_agent_label("claude"), Some(Agent::Claude));
         assert_eq!(parse_agent_label("cursor-agent"), Some(Agent::Cursor));
@@ -996,6 +1005,7 @@ mod tests {
     #[test]
     fn every_agent_has_a_canonical_interactive_executable() {
         let expected = [
+            (Agent::Bot, "bot"),
             (Agent::Pi, "pi"),
             (Agent::Claude, "claude"),
             (Agent::Codex, "codex"),
@@ -1049,6 +1059,12 @@ mod tests {
             "mastracode"
         ));
         assert!(!Agent::SCREEN_MANIFEST_AGENTS.contains(&Agent::Mastracode));
+    }
+
+    #[test]
+    fn bot_uses_full_lifecycle_authority_with_screen_fallback() {
+        assert!(full_lifecycle_hook_authority("herdr:bot", "bot"));
+        assert!(Agent::SCREEN_MANIFEST_AGENTS.contains(&Agent::Bot));
     }
 
     #[test]

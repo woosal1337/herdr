@@ -1324,15 +1324,18 @@ impl TerminalState {
     ) -> bool {
         matches!(
             (source, agent_label, session_start_source),
-            (
-                "herdr:claude",
-                "claude",
-                Some("clear" | "resume" | "compact")
-            ) | (
-                "herdr:codex",
-                "codex",
-                Some("startup" | "clear" | "resume" | "compact")
-            ) | ("herdr:mastracode", "mastracode", Some("startup"))
+            ("herdr:bot", "bot", Some("startup" | "resume"))
+                | (
+                    "herdr:claude",
+                    "claude",
+                    Some("clear" | "resume" | "compact")
+                )
+                | (
+                    "herdr:codex",
+                    "codex",
+                    Some("startup" | "clear" | "resume" | "compact")
+                )
+                | ("herdr:mastracode", "mastracode", Some("startup"))
                 | ("herdr:hermes", "hermes", Some("startup" | "new" | "resume"))
                 | ("herdr:opencode", "opencode", Some("select"))
                 | ("herdr:pi", "pi", Some("new" | "resume" | "fork"))
@@ -2442,6 +2445,7 @@ mod tests {
     #[test]
     fn startup_session_claim_activates_full_lifecycle_integrations() {
         for (agent, source, label) in [
+            (Agent::Bot, "herdr:bot", "bot"),
             (Agent::Kimi, "herdr:kimi", "kimi"),
             (Agent::Kilo, "herdr:kilo", "kilo"),
         ] {
@@ -4554,6 +4558,43 @@ mod tests {
                     .map(|session| session.session_ref.value.as_str()),
                 Some(next_session.as_str()),
                 "{session_start_source} should store the replacement session"
+            );
+        }
+    }
+
+    #[test]
+    fn bot_lifecycle_session_ref_replaces_existing_session_ref() {
+        for session_start_source in ["startup", "resume"] {
+            let mut terminal = test_terminal();
+            terminal.set_detected_state(Some(Agent::Bot), AgentState::Idle);
+            terminal
+                .set_agent_session_ref_for_session_start(
+                    "herdr:bot".into(),
+                    "bot".into(),
+                    crate::agent_resume::AgentSessionRef::id("bot-session"),
+                    Some(20),
+                    Some("startup".into()),
+                )
+                .expect("initial session should be accepted");
+
+            let next_session = format!("bot-{session_start_source}-session");
+            let mutation = terminal
+                .set_agent_session_ref_for_session_start(
+                    "herdr:bot".into(),
+                    "bot".into(),
+                    crate::agent_resume::AgentSessionRef::id(&next_session),
+                    Some(21),
+                    Some(session_start_source.into()),
+                )
+                .unwrap_or_else(|| panic!("{session_start_source} should replace the session"));
+
+            assert!(mutation.session_ref_changed);
+            assert_eq!(
+                terminal
+                    .persisted_agent_session
+                    .as_ref()
+                    .map(|session| session.session_ref.value.as_str()),
+                Some(next_session.as_str())
             );
         }
     }

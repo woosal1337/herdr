@@ -122,6 +122,7 @@ impl SoundConfig {
 impl AgentSoundOverrides {
     pub fn for_agent(&self, agent: Option<Agent>) -> AgentSoundSetting {
         match agent {
+            Some(Agent::Bot) => AgentSoundSetting::Default,
             Some(Agent::Pi) => self.pi,
             Some(Agent::Claude) => self.claude,
             Some(Agent::Codex) => self.codex,

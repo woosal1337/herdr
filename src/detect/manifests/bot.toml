@@ -1,0 +1,43 @@
+id = "bot"
+version = "2026.09.17.1"
+min_engine_version = 3
+updated_at = "2026-09-17T00:00:00Z"
+
+[[rules]]
+id = "blocked_dialog"
+state = "blocked"
+priority = 1000
+region = "whole_recent"
+visible_blocker = true
+any = [
+  { contains = ["Ask before tools that need permission"] },
+  { contains = ["Enter to submit answer"] },
+  { contains = ["Enter to submit all"] },
+]
+
+[[rules]]
+id = "working_status"
+state = "working"
+priority = 900
+region = "bottom_non_empty_lines(8)"
+visible_working = true
+any = [
+  { contains = ["esc to interrupt"] },
+  { line_regex = ['^\s*[\x{2801}-\x{28FF}]\s+'] },
+]
+
+[[rules]]
+id = "prompt_box_idle"
+state = "idle"
+priority = 800
+region = "bottom_non_empty_lines(8)"
+visible_idle = true
+line_regex = ['^\s*│\s*❯']
+
+[[rules]]
+id = "welcome_idle"
+state = "idle"
+priority = 700
+region = "whole_recent"
+visible_idle = true
+contains = ["New worktree", "Resume session", "Bot"]
